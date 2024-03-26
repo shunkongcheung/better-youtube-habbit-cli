@@ -1,0 +1,27 @@
+{
+  "name": "better-youtube-habit-cli",
+  "version": "1.0.0",
+  "description": "Help me better manage my youtube habbit",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Shun Cheung",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/x-ray": "^2.3.6",
+    "@typescript-eslint/eslint-plugin": "^7.4.0",
+    "@typescript-eslint/parser": "^7.4.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.3"
+  },
+  "dependencies": {
+    "cross-fetch": "^4.0.0",
+    "fs": "^0.0.1-security",
+    "node-fetch": "^2.7.0",
+    "ytdl-core": "^4.11.5"
+  }
+}
