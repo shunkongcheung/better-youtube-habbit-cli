@@ -124,6 +124,10 @@ const getVideoDetailsFromPrompt = async (videoDetails: IVideoDetail[], isDefault
 
 (async () => {
   const outputDir = "./outputs";
+  if(!fs.existsSync(outputDir)){
+    fs.mkdirSync(outputDir);
+  }
+
   const args = minimist(process.argv);
 
   const isDaily = args.d || args.daily;
