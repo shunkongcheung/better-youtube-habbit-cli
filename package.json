@@ -25,9 +25,9 @@
   "dependencies": {
     "@inquirer/prompts": "^4.3.0",
     "clear": "^0.1.0",
+    "commander": "^12.0.0",
     "cross-fetch": "^4.0.0",
     "fs": "^0.0.1-security",
-    "minimist": "^1.2.8",
     "node-fetch": "^2.7.0",
     "process.argv": "^0.6.1",
     "sanitize-filename": "^1.6.3",

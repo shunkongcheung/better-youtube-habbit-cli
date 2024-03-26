@@ -1,8 +1,8 @@
 import clear from "clear";
+import { program } from "commander";
 import fetch from "cross-fetch";
 import fs from "fs";
 import * as inquirer from '@inquirer/prompts';
-import minimist from "minimist";
 import sanitize from "sanitize-filename";
 import ytdl from 'ytdl-core';
 
@@ -67,12 +67,8 @@ const storeVideo = async (videoId: string, filename: string) => {
   return new Promise(resolve => stream.on('finish', () => resolve("")));
 }
 
-const getVideoTypeFromPrompt = async (isDefault: boolean) => {
+const getVideoTypeFromPrompt = async () => {
   const choices = Object.values(ChannelType).map(channelType => ({ name: channelType, value: channelType, checked: true }));
-
-  if(isDefault) {
-    return choices.map(item => item.value);
-  }
 
   const answer = await inquirer.checkbox({
     message: "What video type would you like to fetch?",
@@ -83,13 +79,9 @@ const getVideoTypeFromPrompt = async (isDefault: boolean) => {
   return answer;
 }
 
-const getChannelFromPrompt = async (channelTypes: ChannelType[], isDefault: boolean) => {
+const getChannelFromPrompt = async (channelTypes: ChannelType[]) => {
   const channelInTypes = channels.filter(({ types }) => types.some(type => channelTypes.some(channelType => channelType === type)));
   const choices = channelInTypes.map(channel => ({ name: channel.id, value: channel.id, checked: true }));
-
-  if(isDefault) {
-    return choices.map(item => item.value);
-  }
 
   const answer = await inquirer.checkbox({
     message: "Which channel would you want to fetch?",
@@ -100,7 +92,7 @@ const getChannelFromPrompt = async (channelTypes: ChannelType[], isDefault: bool
   return answer;
 }
 
-const getVideoDetailsFromPrompt = async (videoDetails: IVideoDetail[], isDefault: boolean) => {
+const getVideoDetailsFromPrompt = async (videoDetails: IVideoDetail[]) => {
   const choices = videoDetails.map(video => ({
     name: video.title,
     value: video.videoId,
@@ -108,9 +100,7 @@ const getVideoDetailsFromPrompt = async (videoDetails: IVideoDetail[], isDefault
     checked: true
   }));
 
-  const answer = isDefault
-    ? choices.map(item => item.value) 
-    :await inquirer.checkbox({
+  const answer = await inquirer.checkbox({
     message: "Which video would you like to download?",
     choices,
     loop: false,
@@ -118,6 +108,86 @@ const getVideoDetailsFromPrompt = async (videoDetails: IVideoDetail[], isDefault
   });
 
   return videoDetails.filter(item => answer.includes(item.videoId));
+}
+
+const runInteractive = async () => {
+  const videoTypes = await getVideoTypeFromPrompt();
+  const channels = await getChannelFromPrompt(videoTypes);
+
+  const videoDetailsMap: Record<string, IVideoDetail[]> = {};
+
+  for(let idx = 0; idx < channels.length; idx ++) {
+    const channel = channels[idx];
+    const videoIds = await getVideoIds(channel);
+    const videoDetails = await Promise.all(videoIds.map(getVideoDetails));
+
+    const filteredVideoDetails = videoDetails.filter(item => !!item);
+    const confirmedDetails = await getVideoDetailsFromPrompt(filteredVideoDetails);
+
+    videoDetailsMap[channel] = confirmedDetails;
+  }
+
+  return videoDetailsMap;
+}
+
+const getDailyVideoDetails = async () => {
+  const videoDetailsMap: Record<string, IVideoDetail[]> = {};
+
+  console.log(`Start fetching video ID for ${channels.length} channel(s).`);
+  for(let idx = 0; idx < channels.length; idx ++) {
+    const channel = channels[idx];
+    const videoIds = await getVideoIds(channel.id);
+    const videoDetails = await Promise.all(videoIds.map(getVideoDetails));
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+
+    const filteredVideoDetails = videoDetails
+    .filter(item => !!item)
+    .filter(item => new Date(item.uploadDate) > yesterday);
+
+    videoDetailsMap[channel.id] = filteredVideoDetails;
+    console.log(`[(${idx+1}/${channels.length})${channel.id}] fetched ${filteredVideoDetails.length} video.`);
+  }
+
+  return videoDetailsMap;
+}
+
+const storeVideoDetails = async (videoDetailsMap: Record<string, IVideoDetail[]>, outputDir: string) => {
+  // start fetching
+  const targetChannels = Object.keys(videoDetailsMap);
+  let totalSuccessCount = 0;
+  const channelCount = targetChannels.length;
+  console.log(`Fetching ${channelCount} channels...`);
+
+  for(let idx = 0; idx < channelCount; idx ++) {
+    const targetChannelId = targetChannels[idx];
+    const videoDetails = videoDetailsMap[targetChannelId];
+
+    const channelDisplayName = `[(${idx+1}/${channelCount})${targetChannelId}]`;
+
+    let channelSuccessCount = 0;
+    console.log(`${channelDisplayName}: fetching ${videoDetails.length} videos...`);
+
+    for(let jdx = 0; jdx < videoDetails.length; jdx ++) {
+      const { videoId, title } = videoDetails[jdx];
+      const videoFileName = `${slugify(title)}.mp4`;
+      const videoDisplayName = `(${jdx+1}/${videoDetails.length}) ${videoFileName}`;
+
+      try {
+        await storeVideo(videoId, `${outputDir}/${videoFileName}`);
+        console.log(`${channelDisplayName}: completed ${videoDisplayName}`);
+        channelSuccessCount ++;
+      } catch {
+        console.log(`${channelDisplayName}: failed ${videoDisplayName}`);
+      }
+    }
+    console.log(`${channelDisplayName}: completed ${channelSuccessCount}/${videoDetails.length} videos...`);
+    totalSuccessCount += channelSuccessCount;
+  }
+
+  console.log(`Finished. completed ${totalSuccessCount} videos for all target channels`);
 }
 
 
@@ -128,36 +198,24 @@ const getVideoDetailsFromPrompt = async (videoDetails: IVideoDetail[], isDefault
     fs.mkdirSync(outputDir);
   }
 
-  const args = minimist(process.argv);
+  program
+  .name("better-youtube-habbiti-cli")
+  .description(`CLI to download youtube video. By default run daily job.`)
+  .version("1.0.0");
 
-  const isDaily = args.d || args.daily;
+  program.option('-i --interactive', 'Start interactive interface');
+  
 
-  if(!isDaily){
-    clear();
-  }
+  program.parse();
 
-  const videoTypes = await getVideoTypeFromPrompt(isDaily);
-  const channels = await getChannelFromPrompt(videoTypes, isDaily);
+  const options = program.opts();
+  const isInteractive = options.interactive;
 
-  for(let idx = 0; idx < channels.length; idx ++) {
-    const channel = channels[idx];
-    const videoIds = await getVideoIds(channel);
-    const videoDetails = await Promise.all(videoIds.map(getVideoDetails));
+  clear(); // clear terminal
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
+  const videoDetailsMap = isInteractive
+    ? await runInteractive()
+    : await getDailyVideoDetails();
 
-    const filteredVideoDetails = videoDetails
-    .filter(item => !!item)
-    .filter(item => !isDaily || new Date(item.uploadDate) >= yesterday)
-    ;
-
-
-    const confirmedDetails = await getVideoDetailsFromPrompt(filteredVideoDetails, isDaily);
-    await Promise.all(confirmedDetails.map(({ videoId, title }) => {
-      storeVideo(videoId, `${outputDir}/${slugify(title)}.mp4`);
-    }))
-  }
-
+  await storeVideoDetails(videoDetailsMap, outputDir);
 })();
