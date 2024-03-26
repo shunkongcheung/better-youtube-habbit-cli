@@ -61,10 +61,13 @@ const storeVideo = async (videoId: string, filename: string) => {
   }
 
   const url = getUrlFromId(videoId);
+  return new Promise((resolve, reject) => {
+    ytdl(url)
+    .on('finish', () => resolve(""))
+    .on('error', (err: Error) => reject(err))
+    .pipe(fs.createWriteStream(filename, { flags: 'a+' }));
+  });
 
-  const stream = ytdl(url).pipe(fs.createWriteStream(filename, { flags: 'a+' }));
-
-  return new Promise(resolve => stream.on('finish', () => resolve("")));
 }
 
 const getVideoTypeFromPrompt = async () => {
@@ -174,13 +177,18 @@ const storeVideoDetails = async (videoDetailsMap: Record<string, IVideoDetail[]>
       const { videoId, title } = videoDetails[jdx];
       const videoFileName = `${slugify(title)}.mp4`;
       const videoDisplayName = `(${jdx+1}/${videoDetails.length}) ${videoFileName}`;
+      const videoFullpath =  `${outputDir}/${videoFileName}`;
 
       try {
-        await storeVideo(videoId, `${outputDir}/${videoFileName}`);
+        await storeVideo(videoId,videoFullpath);
         console.log(`${channelDisplayName}: completed ${videoDisplayName}`);
         channelSuccessCount ++;
-      } catch {
-        console.log(`${channelDisplayName}: failed ${videoDisplayName}`);
+      } catch (err){
+        if(fs.existsSync(videoFullpath)) {
+          fs.unlinkSync(videoFullpath);
+        }
+        console.log(`${channelDisplayName}: failed ${videoDisplayName}(${videoId}) - ${err}`);
+
       }
     }
     console.log(`${channelDisplayName}: completed ${channelSuccessCount}/${videoDetails.length} videos...`);
@@ -204,7 +212,7 @@ const storeVideoDetails = async (videoDetailsMap: Record<string, IVideoDetail[]>
   .version("1.0.0");
 
   program.option('-i --interactive', 'Start interactive interface');
-  
+
 
   program.parse();
 
@@ -217,5 +225,5 @@ const storeVideoDetails = async (videoDetailsMap: Record<string, IVideoDetail[]>
     ? await runInteractive()
     : await getDailyVideoDetails();
 
-  await storeVideoDetails(videoDetailsMap, outputDir);
+    await storeVideoDetails(videoDetailsMap, outputDir);
 })();
