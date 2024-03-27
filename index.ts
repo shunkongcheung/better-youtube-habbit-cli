@@ -144,11 +144,17 @@ const getDailyVideoDetails = async () => {
 
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
+    yesterday.setHours(7, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(7, 0, 0, 0);
 
     const filteredVideoDetails = videoDetails
     .filter(item => !!item)
-    .filter(item => new Date(item.uploadDate) > yesterday);
+    .filter(item => {
+      const videoDate = new Date(item.uploadDate);
+      return today >= videoDate && videoDate > yesterday;
+    });
 
     videoDetailsMap[channel.id] = filteredVideoDetails;
     console.log(`[(${idx+1}/${channels.length})${channel.id}] fetched ${filteredVideoDetails.length} video.`);
@@ -158,7 +164,6 @@ const getDailyVideoDetails = async () => {
 }
 
 const storeVideoDetails = async (videoDetailsMap: Record<string, IVideoDetail[]>, outputDir: string) => {
-  // start fetching
   const targetChannels = Object.keys(videoDetailsMap);
   let totalSuccessCount = 0;
   const channelCount = targetChannels.length;
@@ -212,6 +217,8 @@ const storeVideoDetails = async (videoDetailsMap: Record<string, IVideoDetail[]>
   .version("1.0.0");
 
   program.option('-i --interactive', 'Start interactive interface');
+  program.option('-c --clean', 'Clean existing files (TBD)');
+  program.option('-o --overwrite', 'Overwrite existing files (TBD)');
 
 
   program.parse();
@@ -225,5 +232,12 @@ const storeVideoDetails = async (videoDetailsMap: Record<string, IVideoDetail[]>
     ? await runInteractive()
     : await getDailyVideoDetails();
 
-    await storeVideoDetails(videoDetailsMap, outputDir);
+  const filteredVideoDetailsMap: Record<string, IVideoDetail[]> = {};
+  Object.keys(videoDetailsMap).forEach(channelId => {
+    if(videoDetailsMap[channelId] && videoDetailsMap[channelId].length) {
+      filteredVideoDetailsMap[channelId] = videoDetailsMap[channelId];
+    }
+  });
+
+    await storeVideoDetails(filteredVideoDetailsMap, outputDir);
 })();
