@@ -24,6 +24,18 @@ function slugify(title: string) {
   return sanitize(title);
 }
 
+const getAugmentedDate = (dateStr: string) => {
+  // setHours would set date to previous date if original Date was in 00:00AM.
+  // this function is used in commander option parsing only
+  return `${dateStr} 11:00 AM`
+};
+
+const getDateAtStdTime = (dateOriginal: Date | string) => {
+    const result = new Date(dateOriginal);
+    result.setHours(7, 0, 0, 0);
+    return result;
+}
+
 const getVideoIds = async (channel: string) => {
   const url = `https://www.youtube.com/${channel}/videos`;
     const response = await fetch(url);
@@ -114,6 +126,8 @@ const getVideoDetailsFromPrompt = async (videoDetails: IVideoDetail[]) => {
 }
 
 const runInteractive = async () => {
+  clear(); // clear terminal
+
   const videoTypes = await getVideoTypeFromPrompt();
   const channels = await getChannelFromPrompt(videoTypes);
 
@@ -133,27 +147,21 @@ const runInteractive = async () => {
   return videoDetailsMap;
 }
 
-const getDailyVideoDetails = async () => {
+const getDailyVideoDetails = async ({fromDate, toDate}: { fromDate: Date, toDate: Date }) => {
   const videoDetailsMap: Record<string, IVideoDetail[]> = {};
 
+  console.log(`Fetching data from ${fromDate} to ${toDate}`);
   console.log(`Start fetching video ID for ${channels.length} channel(s).`);
   for(let idx = 0; idx < channels.length; idx ++) {
     const channel = channels[idx];
     const videoIds = await getVideoIds(channel.id);
     const videoDetails = await Promise.all(videoIds.map(getVideoDetails));
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(7, 0, 0, 0);
-
-    const today = new Date();
-    today.setHours(7, 0, 0, 0);
-
     const filteredVideoDetails = videoDetails
     .filter(item => !!item)
     .filter(item => {
       const videoDate = new Date(item.uploadDate);
-      return today >= videoDate && videoDate > yesterday;
+      return toDate >= videoDate && videoDate > fromDate;
     });
 
     videoDetailsMap[channel.id] = filteredVideoDetails;
@@ -206,31 +214,44 @@ const storeVideoDetails = async (videoDetailsMap: Record<string, IVideoDetail[]>
 
 
 (async () => {
-  const outputDir = "./outputs";
-  if(!fs.existsSync(outputDir)){
-    fs.mkdirSync(outputDir);
-  }
-
   program
   .name("better-youtube-habbiti-cli")
   .description(`CLI to download youtube video. By default run daily job.`)
   .version("1.0.0");
 
-  program.option('-i --interactive', 'Start interactive interface');
-  program.option('-c --clean', 'Clean existing files (TBD)');
-  program.option('-o --overwrite', 'Overwrite existing files (TBD)');
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
 
-
+  program.option('-i --interactive', 'Start interactive interface.');
+  program.option('-o --outputDir', 'Directory to outputs.', './outputs');
+  program.option(
+    '-f --fromDate <fromDate>',
+    'Downloading from this date(yyyy-mm-dd).',
+    (dateStr: string) => getDateAtStdTime(getAugmentedDate(dateStr)),
+    yesterday
+  );
+  program.option(
+    '-t --toDate <toDate>',
+    'Downloading until this date(yyyy-mm-dd).',
+    (dateStr: string) => getDateAtStdTime(getAugmentedDate(dateStr)),
+    today
+  );
   program.parse();
 
   const options = program.opts();
   const isInteractive = options.interactive;
+  const outputDir = options.outputDir;
+  const fromDate = options.fromDate;
+  const toDate = options.toDate;
 
-  clear(); // clear terminal
+  if(!fs.existsSync(outputDir)){
+    fs.mkdirSync(outputDir);
+  }
 
   const videoDetailsMap = isInteractive
     ? await runInteractive()
-    : await getDailyVideoDetails();
+    : await getDailyVideoDetails({ fromDate, toDate });
 
   const filteredVideoDetailsMap: Record<string, IVideoDetail[]> = {};
   Object.keys(videoDetailsMap).forEach(channelId => {
