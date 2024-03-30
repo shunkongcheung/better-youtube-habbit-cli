@@ -5,43 +5,48 @@ import { getAugmentedDate, getDateAtStdTime } from "./date";
 
 interface ICommandResult extends IControl {
   isInteractive: boolean;
+  playlistId: string;
 }
 
 
 export const getCommands = (): ICommandResult => {
   program
   .name("better-youtube-habbiti-cli")
-  .description(`CLI to download youtube video. By default run daily job.`)
+  .description("CLI to download youtube video. By default run daily job.")
   .version("1.0.0");
 
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
 
-  program.option('-c --channelFilepath', 'Channels file', './channels.json');
-  program.option('-i --interactive', 'Start interactive interface.');
-  program.option('-o --outputDir', 'Directory to outputs.', './outputs');
-  program.option(
+  program
+  .option('-c --channelFilepath <channelFilepath>', 'Channels file', './channels.json')
+  .option(
     '-f --fromDate <fromDate>',
     'Downloading from this date(yyyy-mm-dd).',
-    (dateStr: string) => getDateAtStdTime(getAugmentedDate(dateStr)),
-    yesterday
-  );
-  program.option(
+    (dateStr: string) => getAugmentedDate(dateStr),
+    yesterday.toISOString().split("T")[0]
+  )
+  .option('-i --interactive', 'Start interactive interface.')
+  .option('-p --playlistId <playlistId>', 'Playlist ID.', "")
+  .option('-o --outputDir <outputDir>', 'Directory to outputs.', './outputs')
+  .option(
     '-t --toDate <toDate>',
     'Downloading until this date(yyyy-mm-dd).',
-    (dateStr: string) => getDateAtStdTime(getAugmentedDate(dateStr)),
-    today
+    (dateStr: string) => getAugmentedDate(dateStr),
+    today.toISOString().split("T")[0]
   );
+  
+
   program.parse();
 
   const options = program.opts();
-
   const channelFilepath = options.channelFilepath;
-  const isInteractive = options.interactive;
-  const outputDir = options.outputDir;
   const fromDate = getDateAtStdTime(options.fromDate);
+  const isInteractive = options.interactive;
+  const playlistId = options.playlistId;
+  const outputDir = options.outputDir;
   const toDate = getDateAtStdTime(options.toDate);
 
-  return { channelFilepath, isInteractive, outputDir,fromDate, toDate };
+  return { channelFilepath, isInteractive, playlistId, outputDir,fromDate, toDate };
 }
