@@ -3,7 +3,7 @@ import fs from "fs";
 import { getCommands } from "./commands";
 import { runInteractive } from "./interactive";
 import { storeVideoDetails } from "./store";
-import { getVideoIds, getVideoDetails, IVideoDetail } from "./youtube";
+import { getChannelVideoIds, getPlayListVideoIds, getVideoDetails, IVideoDetail } from "./youtube";
 
 interface  IProps { 
   channels: string[]
@@ -24,7 +24,7 @@ const getDailyVideoDetails = async ({ channels, fromDate, toDate}: IProps) => {
   console.log(`Start fetching video ID for ${channels.length} channel(s).`);
   for(let idx = 0; idx < channels.length; idx ++) {
     const channelId = channels[idx];
-    const videoIds = await getVideoIds(channelId);
+    const videoIds = await getChannelVideoIds(channelId);
     const videoDetails = await Promise.all(videoIds.map(getVideoDetails));
 
     const filteredVideoDetails = videoDetails
@@ -41,24 +41,47 @@ const getDailyVideoDetails = async ({ channels, fromDate, toDate}: IProps) => {
   return videoDetailsMap;
 }
 
-(async () => {
-  const { isInteractive, ... rest } = getCommands();
+const getPlayListVideoDetails = async (playlistId: string) => {
+  const videoDetailsMap: Record<string, IVideoDetail[]> = {};
 
-  const { channelFilepath, outputDir, fromDate, toDate } = isInteractive ? await runInteractive(): rest
-
-  if(!fs.existsSync(outputDir)){
-    fs.mkdirSync(outputDir);
-  }
-
-  const channels = readChannelFile(channelFilepath);
-  const videoDetailsMap = await getDailyVideoDetails({ channels, fromDate, toDate });
-
-  const filteredVideoDetailsMap: Record<string, IVideoDetail[]> = {};
-  Object.keys(videoDetailsMap).forEach(channelId => {
-    if(videoDetailsMap[channelId] && videoDetailsMap[channelId].length) {
-      filteredVideoDetailsMap[channelId] = videoDetailsMap[channelId];
-    }
+  console.log(`Start fetching playlist ID ${playlistId}.`);
+  const videoIds = await getPlayListVideoIds(playlistId);
+  const videoDetails = await Promise.all(videoIds.map(getVideoDetails));
+  const filteredVideoDetails = videoDetails.filter(item => !!item);
+    
+  filteredVideoDetails.forEach((item, index) => {
+    const renameWithIndex = `${index+1} - ${item.title}`;
+    item.title = renameWithIndex;
   });
 
-  await storeVideoDetails(filteredVideoDetailsMap, outputDir);
+  videoDetailsMap[playlistId] = filteredVideoDetails;
+  console.log(`Fetched ${filteredVideoDetails.length} video.`);
+
+  return videoDetailsMap;
+}
+
+(async () => {
+  const { isInteractive, playlistId, ... rest } = getCommands();
+
+  const { channelFilepath, outputDir, fromDate, toDate } = !playlistId && isInteractive
+    ? await runInteractive()
+    : rest;
+
+    if(!fs.existsSync(outputDir)){
+      fs.mkdirSync(outputDir);
+    }
+
+    const channels = !playlistId ? readChannelFile(channelFilepath): [];
+    const videoDetailsMap = playlistId
+      ? await getPlayListVideoDetails(playlistId)
+      : await getDailyVideoDetails({ channels, fromDate, toDate });
+
+      const filteredVideoDetailsMap: Record<string, IVideoDetail[]> = {};
+      Object.keys(videoDetailsMap).forEach(channelId => {
+        if(videoDetailsMap[channelId] && videoDetailsMap[channelId].length) {
+          filteredVideoDetailsMap[channelId] = videoDetailsMap[channelId];
+        }
+      });
+
+      await storeVideoDetails(filteredVideoDetailsMap, outputDir);
 })();
