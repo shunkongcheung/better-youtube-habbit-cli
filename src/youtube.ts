@@ -50,7 +50,8 @@ export const getVideoDetails = async (videoId: string): Promise<IVideoDetail> =>
 
 export const getVideoStream = async (videoId: string) => {
   const url = getUrlFromId(videoId);
-  return ytdl(url);
+  const iTag = 18; // 360p + audio
+  return ytdl(url, { filter: format => format.itag === iTag });
 }
 
 
