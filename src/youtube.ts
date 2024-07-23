@@ -1,4 +1,4 @@
-import fs from "fs";
+// import fs from "fs";
 import fetch from "cross-fetch";
 import ytdl from '@distube/ytdl-core';
 
@@ -12,12 +12,12 @@ const getUrlFromId = (videoId: string) =>  `http://www.youtube.com/watch?v=${vid
 
 const getUnique = (arr: string[]) => [...new Set(arr)];
 
-const getYtInitialDataFromHtml = (fileText: string) => {
-  const ytInitialDataMatch = fileText.match(/ytInitialData = ({.+});<\/script>/);
-  const ytInitialDataText = ytInitialDataMatch[0].replace("ytInitialData = ", "").replace(";</script>", "");
-  const ytInitialData = JSON.parse(ytInitialDataText);
-  return ytInitialData;
-}
+// const getYtInitialDataFromHtml = (fileText: string) => {
+//   const ytInitialDataMatch = fileText.match(/ytInitialData = ({.+});<\/script>/);
+//   const ytInitialDataText = ytInitialDataMatch[0].replace("ytInitialData = ", "").replace(";</script>", "");
+//   const ytInitialData = JSON.parse(ytInitialDataText);
+//   return ytInitialData;
+// }
 
 // const getYtPlayerResponseFromHtml = (fileText: string) => {
 //   const ytDataMatch = fileText.match(/ytInitialPlayerResponse = ({.+});/);
@@ -30,12 +30,12 @@ const getYtInitialDataFromHtml = (fileText: string) => {
 // }
 
 
-(async () => {
-  const request = await fetch("https://www.youtube.com/watch?v=jSayIEKr78w");
-  const file = await request.text();
-  const ytInitialData = getYtInitialDataFromHtml(file);
-  fs.writeFileSync("./test.json", JSON.stringify(ytInitialData, null, 4));
-})()
+// (async () => {
+//   const request = await fetch("https://www.youtube.com/watch?v=jSayIEKr78w");
+//   const file = await request.text();
+//   const ytInitialData = getYtInitialDataFromHtml(file);
+//   fs.writeFileSync("./test.json", JSON.stringify(ytInitialData, null, 4));
+// })()
 
 const getIdsFromHtml = (htmlText: string) => {
   const result = htmlText.match(/ytInitialData = {.*};<\/script>/)[0];
