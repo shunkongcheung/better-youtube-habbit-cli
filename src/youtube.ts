@@ -1,6 +1,6 @@
 import fs from "fs";
 import fetch from "cross-fetch";
-import ytdl from 'ytdl-core';
+import ytdl from '@distube/ytdl-core';
 
 export interface IVideoDetail {
   videoId: string;
@@ -63,7 +63,6 @@ export const getVideoDetails = async (videoId: string): Promise<IVideoDetail> =>
   const url = getUrlFromId(videoId);
   try {
     const { videoDetails } = await ytdl.getBasicInfo(url)
-    console.log(videoDetails);
     return {
       videoId,
       title: videoDetails.title,
