@@ -6,6 +6,7 @@ import { getAugmentedDate, getDateAtStdTime } from "./date";
 interface ICommandResult extends IControl {
   isInteractive: boolean;
   playlistId: string;
+  videoId: string;
 }
 
 
@@ -35,7 +36,9 @@ export const getCommands = (): ICommandResult => {
     'Downloading until this date(yyyy-mm-dd).',
     (dateStr: string) => getAugmentedDate(dateStr),
     today.toISOString().split("T")[0]
-  );
+  )
+  .option('-v --videoId <videoId>', 'Video ID.', "")
+  ;
   
 
   program.parse();
@@ -47,6 +50,7 @@ export const getCommands = (): ICommandResult => {
   const playlistId = options.playlistId;
   const outputDir = options.outputDir;
   const toDate = getDateAtStdTime(options.toDate);
+  const videoId = options.videoId;
 
-  return { channelFilepath, isInteractive, playlistId, outputDir,fromDate, toDate };
+  return { channelFilepath, isInteractive, playlistId, outputDir,fromDate, toDate, videoId };
 }

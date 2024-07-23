@@ -41,11 +41,7 @@ const getDailyVideoDetails = async ({ channels, fromDate, toDate}: IProps) => {
   return videoDetailsMap;
 }
 
-const getPlayListVideoDetails = async (playlistId: string) => {
-  const videoDetailsMap: Record<string, IVideoDetail[]> = {};
-
-  console.log(`Start fetching playlist ID ${playlistId}.`);
-  const videoIds = await getPlayListVideoIds(playlistId);
+const getVideoDetailsFromVideoIds = async (videoIds: string[]) => {
   const videoDetails = await Promise.all(videoIds.map(getVideoDetails));
   const filteredVideoDetails = videoDetails.filter(item => !!item);
     
@@ -53,6 +49,15 @@ const getPlayListVideoDetails = async (playlistId: string) => {
     const renameWithIndex = `${index+1} - ${item.title}`;
     item.title = renameWithIndex;
   });
+  return filteredVideoDetails;
+}
+
+const getPlayListVideoDetails = async (playlistId: string) => {
+  console.log(`Start fetching playlist ID ${playlistId}.`);
+  const videoDetailsMap: Record<string, IVideoDetail[]> = {};
+
+  const videoIds = await getPlayListVideoIds(playlistId);
+  const filteredVideoDetails = await getVideoDetailsFromVideoIds(videoIds);
 
   videoDetailsMap[playlistId] = filteredVideoDetails;
   console.log(`Fetched ${filteredVideoDetails.length} video.`);
@@ -61,9 +66,10 @@ const getPlayListVideoDetails = async (playlistId: string) => {
 }
 
 (async () => {
-  const { isInteractive, playlistId, ... rest } = getCommands();
+  const { isInteractive, playlistId, videoId, ... rest } = getCommands();
+  const hasDesignatedTarget = !!(playlistId || videoId);
 
-  const { channelFilepath, outputDir, fromDate, toDate } = !playlistId && isInteractive
+  const { channelFilepath, outputDir, fromDate, toDate } = !(hasDesignatedTarget) && isInteractive
     ? await runInteractive()
     : rest;
 
@@ -72,7 +78,9 @@ const getPlayListVideoDetails = async (playlistId: string) => {
     }
 
     const channels = !playlistId ? readChannelFile(channelFilepath): [];
-    const videoDetailsMap = playlistId
+    const videoDetailsMap = videoId
+    ? { [videoId]: await getVideoDetailsFromVideoIds([videoId]) }
+      : playlistId
       ? await getPlayListVideoDetails(playlistId)
       : await getDailyVideoDetails({ channels, fromDate, toDate });
 
