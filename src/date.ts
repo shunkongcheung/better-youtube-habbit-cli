@@ -6,7 +6,13 @@ export const getAugmentedDate = (dateStr: string) => {
 
 export const getDateAtStdTime = (dateOriginal: Date | string) => {
   // expecting dateOriginal be in format of "yyyy-mm-dd"
-  const result = new Date(dateOriginal);
+  const result = typeof dateOriginal == "string"
+  ? new Date(
+    Number(dateOriginal.split("-")[0]), 
+    Number(dateOriginal.split("-")[1]) - 1, 
+    Number(dateOriginal.split("-")[2])
+  )
+  : new Date(dateOriginal);
   result.setHours(7, 0, 0, 0);
   return result;
 }
