@@ -1,5 +1,5 @@
 import clear from "clear";
-import * as inquirer from '@inquirer/prompts';
+import * as inquirer from "@inquirer/prompts";
 import { IControl } from "./control.type";
 import { getAugmentedDate, getDateAtStdTime } from "./date";
 
@@ -28,8 +28,12 @@ export const runInteractive = async (): Promise<IControl> => {
     message: "Downloading until this date(yyyy-mm-dd).",
   });
 
-  const fromDate = getDateAtStdTime(fromDateStr ? getAugmentedDate(fromDateStr) : yesterday);
-  const toDate = getDateAtStdTime(toDateStr ? getAugmentedDate(toDateStr) : today);
+  const fromDate = getDateAtStdTime(
+    fromDateStr ? getAugmentedDate(fromDateStr) : yesterday,
+  );
+  const toDate = getDateAtStdTime(
+    toDateStr ? getAugmentedDate(toDateStr) : today,
+  );
 
   return { channelFilepath, outputDir, fromDate, toDate };
-}
+};

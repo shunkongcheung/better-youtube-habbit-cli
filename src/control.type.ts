@@ -4,4 +4,3 @@ export interface IControl {
   fromDate: Date;
   toDate: Date;
 }
-

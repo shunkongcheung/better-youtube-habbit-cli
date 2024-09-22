@@ -10,40 +10,43 @@ interface ICommandResult extends IControl {
   videoId: string;
 }
 
-const LOG_LOCATION = "Command"
+const LOG_LOCATION = "Command";
 
 export const getCommands = (logger: ILogger): ICommandResult => {
   logger(LogLevel.debug, LOG_LOCATION, "Begin");
 
   program
-  .name("better-youtube-habbiti-cli")
-  .description("CLI to download youtube video. By default run daily job.")
-  .version("1.0.0");
+    .name("better-youtube-habbiti-cli")
+    .description("CLI to download youtube video. By default run daily job.")
+    .version("1.0.0");
 
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
 
   program
-  .option('-c --channelFilepath <channelFilepath>', 'Channels file', './channels.json')
-  .option(
-    '-f --fromDate <fromDate>',
-    'Downloading from this date(yyyy-mm-dd).',
-    (dateStr: string) => getAugmentedDate(dateStr),
-    yesterday.toISOString().split("T")[0]
-  )
-  .option('-i --interactive', 'Start interactive interface.')
-  .option('-p --playlistId <playlistId>', 'Playlist ID.', "")
-  .option('-o --outputDir <outputDir>', 'Directory to outputs.', './outputs')
-  .option(
-    '-t --toDate <toDate>',
-    'Downloading until this date(yyyy-mm-dd).',
-    (dateStr: string) => getAugmentedDate(dateStr),
-    today.toISOString().split("T")[0]
-  )
-  .option('-v --videoId <videoId>', 'Video ID.', "")
-  ;
-  
+    .option(
+      "-c --channelFilepath <channelFilepath>",
+      "Channels file",
+      "./channels.json",
+    )
+    .option(
+      "-f --fromDate <fromDate>",
+      "Downloading from this date(yyyy-mm-dd).",
+      (dateStr: string) => getAugmentedDate(dateStr),
+      yesterday.toISOString().split("T")[0],
+    )
+    .option("-i --interactive", "Start interactive interface.")
+    .option("-p --playlistId <playlistId>", "Playlist ID.", "")
+    .option("-o --outputDir <outputDir>", "Directory to outputs.", "./outputs")
+    .option(
+      "-t --toDate <toDate>",
+      "Downloading until this date(yyyy-mm-dd).",
+      (dateStr: string) => getAugmentedDate(dateStr),
+      today.toISOString().split("T")[0],
+    )
+    .option("-v --videoId <videoId>", "Video ID.", "");
+
   program.parse();
 
   const options = program.opts();
@@ -71,5 +74,13 @@ export const getCommands = (logger: ILogger): ICommandResult => {
   logger(LogLevel.debug, LOG_LOCATION, "videoId", videoId);
 
   logger(LogLevel.debug, LOG_LOCATION, "Finished");
-  return { channelFilepath, isInteractive, playlistId, outputDir,fromDate, toDate, videoId };
-}
+  return {
+    channelFilepath,
+    isInteractive,
+    playlistId,
+    outputDir,
+    fromDate,
+    toDate,
+    videoId,
+  };
+};
