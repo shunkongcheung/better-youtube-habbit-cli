@@ -18,3 +18,7 @@ npm start
 node ./dist/index.js -h
 node ./dist/index.js --help
 ```
+* To download your file through local network
+```bash
+npm run serve
+```
