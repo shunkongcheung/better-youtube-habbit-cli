@@ -12,7 +12,7 @@ const fileNames = fs.readdirSync(outputDir);
 const networkInterfaces = os.networkInterfaces();
 const localIP = networkInterfaces["Wi-Fi"][3].address; // Replace with your interface name
 
-app.get("/:fileName", (req, res) => {
+app.get("/f/:fileName", (req, res) => {
   const id = req.query.id as string;
   const fileName = fileNames[id];
   res.sendFile(path.join(outputDir, fileName));
@@ -21,7 +21,7 @@ app.get("/:fileName", (req, res) => {
 app.get("/", (_req, res) => {
   const fileHrefs = fileNames.map((fileName, id) => {
     const url = encodeURI(fileName).replace(/#/g, "") + `?id=${id}`;
-    return `<a href="/${url}">${fileName}</a>`;
+    return `<a href="/f/${url}">${fileName}</a>`;
   });
   const listItems = fileHrefs.map((fileHref) => `<li>${fileHref}</li>`);
   const content = `<ul>${listItems.join("")}</ul>`;
@@ -35,12 +35,12 @@ const getQrCode = async (value: string) =>
 
 (async () => {
   app.listen(3000);
-  const qrcode = await getQrCode(`http://${localIP}:3000`);
+
+  const url = `http://${localIP}:3000`;
+  const qrcode = await getQrCode(url);
   const output =
     "Hello, welcome to better youtube habit service.\n" +
-    `Your current IP is ${localIP}. Your have the following files:\n` +
-    fileNames.join("\n\n") +
-    "\n\n" +
+    `Your current IP is ${url}. Or scan:\n\n` +
     qrcode;
 
   console.log(output);
